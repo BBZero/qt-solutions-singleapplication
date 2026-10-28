@@ -1,2 +1,2 @@
- forked form qtproject/qt-solutions
- mainly focus on single application implement
+- forked form qtproject/qt-solutions
+- mainly focus on single application implement
