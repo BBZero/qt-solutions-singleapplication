@@ -96,11 +96,15 @@
 */
 
 
-void QtSingleApplication::sysInit(const QString &appId)
+void QtSingleApplication::sysInit(const QString &appId, const bool retryMode)
 {
-    actWin = 0;
-    peer = new QtLocalPeer(this, appId);
-    connect(peer, SIGNAL(messageReceived(const QString&)), SIGNAL(messageReceived(const QString&)));
+	if (m_pPeer)
+	{
+		return;
+	}
+	m_pActWin = nullptr;
+    m_pPeer = new QtLocalPeer(this, appId, retryMode);
+    connect(m_pPeer, SIGNAL(messageReceived(const QString&)), SIGNAL(messageReceived(const QString&)));
 }
 
 
@@ -119,7 +123,15 @@ QtSingleApplication::QtSingleApplication(int &argc, char **argv, bool GUIenabled
 {
     sysInit();
 }
-
+QtSingleApplication::~QtSingleApplication()
+{
+	m_pActWin = nullptr;
+	if (m_pPeer)
+	{
+		delete m_pPeer;
+		m_pPeer = nullptr;
+	}
+}
 
 /*!
     Creates a QtSingleApplication object with the application
@@ -131,6 +143,26 @@ QtSingleApplication::QtSingleApplication(const QString &appId, int &argc, char *
     : QApplication(argc, argv)
 {
     sysInit(appId);
+}
+QtSingleApplication::QtSingleApplication(int &argc, char **argv, bool GUIenabled, bool retryMode) : QApplication(argc, argv, GUIenabled)
+{
+   sysInit("", true);
+}
+bool QtSingleApplication::tryRun()
+{
+	if (!m_pPeer)
+	{
+		return false;
+	}
+	return m_pPeer->tryRunMaster();
+}
+int QtSingleApplication::retry(const QString &id)
+{
+	if (!m_pPeer)
+	{
+		return -100;
+	}
+	return m_pPeer->retry(id);
 }
 
 #if QT_VERSION < 0x050000
@@ -202,7 +234,11 @@ QtSingleApplication::QtSingleApplication(Display* dpy, const QString &appId, int
 
 bool QtSingleApplication::isRunning()
 {
-    return peer->isClient();
+	if (!m_pPeer)
+	{
+		return false;
+	}
+    return m_pPeer->isRunClient();
 }
 
 
@@ -221,7 +257,11 @@ bool QtSingleApplication::isRunning()
 */
 bool QtSingleApplication::sendMessage(const QString &message, int timeout)
 {
-    return peer->sendMessage(message, timeout);
+	if (!m_pPeer)
+	{
+		return false;
+	}
+    return m_pPeer->sendMessage(message, timeout);
 }
 
 
@@ -231,7 +271,11 @@ bool QtSingleApplication::sendMessage(const QString &message, int timeout)
 */
 QString QtSingleApplication::id() const
 {
-    return peer->applicationId();
+	if (!m_pPeer)
+	{
+		return "";
+	}
+    return m_pPeer->applicationId();
 }
 
 
@@ -249,11 +293,11 @@ QString QtSingleApplication::id() const
 
 void QtSingleApplication::setActivationWindow(QWidget* aw, bool activateOnMessage)
 {
-    actWin = aw;
+    m_pActWin = aw;
     if (activateOnMessage)
-        connect(peer, SIGNAL(messageReceived(const QString&)), this, SLOT(activateWindow()));
+        connect(m_pPeer, SIGNAL(messageReceived(const QString&)), this, SLOT(activateWindow()));
     else
-        disconnect(peer, SIGNAL(messageReceived(const QString&)), this, SLOT(activateWindow()));
+        disconnect(m_pPeer, SIGNAL(messageReceived(const QString&)), this, SLOT(activateWindow()));
 }
 
 
@@ -265,7 +309,7 @@ void QtSingleApplication::setActivationWindow(QWidget* aw, bool activateOnMessag
 */
 QWidget* QtSingleApplication::activationWindow() const
 {
-    return actWin;
+    return m_pActWin;
 }
 
 
@@ -285,10 +329,10 @@ QWidget* QtSingleApplication::activationWindow() const
 */
 void QtSingleApplication::activateWindow()
 {
-    if (actWin) {
-        actWin->setWindowState(actWin->windowState() & ~Qt::WindowMinimized);
-        actWin->raise();
-        actWin->activateWindow();
+    if (m_pActWin) {
+		m_pActWin->setWindowState(m_pActWin->windowState() & ~Qt::WindowMinimized);
+		m_pActWin->raise();
+		m_pActWin->activateWindow();
     }
 }
 

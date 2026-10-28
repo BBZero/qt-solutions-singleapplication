@@ -37,16 +37,15 @@ public:
     ~QtLockedFile();
 
     bool open(OpenMode mode);
-
+	void close();
     bool lock(LockMode mode, bool block = true);
     bool unlock();
     bool isLocked() const;
     LockMode lockMode() const;
-
 private:
 #ifdef Q_OS_WIN
-    Qt::HANDLE wmutex;
-    Qt::HANDLE rmutex;
+    Qt::HANDLE wmutex = 0;
+    Qt::HANDLE rmutex = 0;
     QVector<Qt::HANDLE> rmutexes;
     QString mutexname;
 

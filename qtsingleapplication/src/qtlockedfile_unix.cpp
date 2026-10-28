@@ -69,10 +69,16 @@ bool QtLockedFile::unlock()
     m_lock_mode = NoLock;
     return true;
 }
-
+QtLockedFile::close()
+{
+	if (isOpen())
+	{
+		unlock();
+		QFile::close();
+	}
+}
 QtLockedFile::~QtLockedFile()
 {
-    if (isOpen())
-        unlock();
+	close();
 }
 

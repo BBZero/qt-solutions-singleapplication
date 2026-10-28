@@ -80,11 +80,17 @@ bool QtLockedFile::lock(LockMode mode, bool block)
     if (m_lock_mode != NoLock)
         unlock();
 
-    if (!wmutex && !(wmutex = getMutexHandle(-1, true)))
-        return false;
+	if (!wmutex && !(wmutex = getMutexHandle(-1, true)))
+	{
+		//qWarning("QtLockedFile::lock(): !wmutex && !(wmutex = getMutexHandle(-1, true))");
+		return false;
+	}
 
-    if (!waitMutex(wmutex, block))
-        return false;
+	if (!waitMutex(wmutex, block))
+	{
+		//qWarning("QtLockedFile::lock(): !waitMutex(wmutex, block), %s", qPrintable(this->fileName()));
+		return false;
+	}
 
     if (mode == ReadLock) {
         int idx = 0;
@@ -147,7 +153,7 @@ bool QtLockedFile::unlock()
     if (!isLocked())
         return true;
 
-    if (m_lock_mode == ReadLock) {
+    if (m_lock_mode == ReadLock && rmutex) {
         ReleaseMutex(rmutex);
         CloseHandle(rmutex);
         rmutex = 0;
@@ -158,17 +164,35 @@ bool QtLockedFile::unlock()
             CloseHandle(mutex);
         }
         rmutexes.clear();
-        ReleaseMutex(wmutex);
+		if (wmutex)
+		{
+			ReleaseMutex(wmutex);
+			wmutex = 0;
+		}
     }
 
     m_lock_mode = QtLockedFile::NoLock;
     return true;
 }
 
+void QtLockedFile::close()
+{
+	//qDebug("QtLockedFile::close()");
+	if (isOpen())
+	{
+		//qDebug("QtLockedFile::close() call unlock");
+		unlock();
+		QFile::close();
+	}
+	//the below is not necessary
+	if (wmutex)
+	{
+		CloseHandle(wmutex);
+		wmutex = nullptr;
+	}
+	mutexname = "";
+}
 QtLockedFile::~QtLockedFile()
 {
-    if (isOpen())
-        unlock();
-    if (wmutex)
-        CloseHandle(wmutex);
+	close();
 }

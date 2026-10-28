@@ -31,6 +31,7 @@ class QT_QTSINGLEAPPLICATION_EXPORT QtSingleApplication : public QApplication
 public:
     QtSingleApplication(int &argc, char **argv, bool GUIenabled = true);
     QtSingleApplication(const QString &id, int &argc, char **argv);
+	QtSingleApplication(int &argc, char **argv, bool GUIenabled = true, bool retryMode = false);
 #if QT_VERSION < 0x050000
     QtSingleApplication(int &argc, char **argv, Type type);
 #  if defined(Q_WS_X11)
@@ -39,7 +40,10 @@ public:
     QtSingleApplication(Display* dpy, const QString &appId, int argc, char **argv, Qt::HANDLE visual = 0, Qt::HANDLE colormap = 0);
 #  endif // Q_WS_X11
 #endif // QT_VERSION < 0x050000
-
+	~QtSingleApplication();
+public:
+	int retry(const QString &id);
+	bool tryRun();
     bool isRunning();
     QString id() const;
 
@@ -60,9 +64,9 @@ Q_SIGNALS:
 
 
 private:
-    void sysInit(const QString &appId = QString());
-    QtLocalPeer *peer;
-    QWidget *actWin;
+    void sysInit(const QString &appId = QString(), const bool retryMode = false);
+    QtLocalPeer *m_pPeer = nullptr;
+    QWidget *m_pActWin = nullptr;
 };
 
 #endif // QTSINGLEAPPLICATION_H
